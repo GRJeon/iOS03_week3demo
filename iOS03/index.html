@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>애플 멀티디바이스 포토부스 프로젝트 발표</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font: Noto Sans KR for professional Korean typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f5f5f7; /* Apple-style light gray */
+            color: #1d1d1f;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        /* Custom Scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .nav-item.active {
+            color: #0071e3; /* Apple Blue */
+            border-bottom: 2px solid #0071e3;
+            font-weight: 600;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .arch-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .arch-node:hover {
+            transform: scale(1.05);
+            background-color: #e0f2fe; /* Light blue */
+            border-color: #0071e3;
+        }
+        .arch-node.selected {
+            background-color: #0071e3;
+            color: white;
+            border-color: #005bb5;
+        }
+    </style>
+    <!-- Chosen Palette: Apple Minimalist (White, Light Gray #f5f5f7, Text #1d1d1f, Accent Blue #0071e3) -->
+    <!-- Application Structure Plan:
+         1. Hero Section: Project Title and core concept summary.
+         2. Tab Navigation:
+            - "Overview & Q&A": Addressing previous feedback (Connectivity issues) using a comparative chart.
+            - "Process & Progress": Timeline of development (Merging, Features).
+            - "Architecture": Interactive diagram explaining MVI and Clean Architecture decisions.
+            - "Challenges": Highlighting the Responsive UI task.
+         3. Dynamic Content Area: Switches based on tab selection.
+         4. Rationale: Tabbed dashboard allows the presenter to focus on one topic at a time (Q&A, Tech, progress) while keeping the context accessible.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Q&A / Tech Decision: Radar Chart. Goal: Compare Multipeer vs Network.framework. Interaction: Tooltips. Rationale: Shows trade-offs (Ease vs Perf) visually.
+         2. Architecture: Interactive CSS Diagram. Goal: Explain MVI flow. Interaction: Click nodes to reveal details. Rationale: Simplifies complex logic flow.
+         3. Progress: Vertical Timeline. Goal: Show linear progression. Interaction: None (static info).
+         4. Responsive Challenge: Interactive Resizer. Goal: Demonstrate the problem of aspect ratios. Interaction: Slider. Rationale: "Show, don't just tell" the UI difficulty.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header / Hero -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900">Apple Device Photo Booth</h1>
+                <p class="text-sm text-gray-500">iPhone 고화질 카메라 + Mac/iPad 대화면 연동 프로젝트</p>
+            </div>
+            <div class="text-xs font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                발표 자료
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 overflow-x-auto" id="nav-container">
+                <button onclick="switchTab('qna')" id="nav-qna" class="nav-item active py-4 px-1 text-sm font-medium text-gray-900 whitespace-nowrap">
+                    1. 지난 Q&A 및 기술 선정
+                </button>
+                <button onclick="switchTab('process')" id="nav-process" class="nav-item py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">
+                    2. 진행 과정 (Timeline)
+                </button>
+                <button onclick="switchTab('architecture')" id="nav-architecture" class="nav-item py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">
+                    3. 아키텍쳐 (MVI)
+                </button>
+                <button onclick="switchTab('challenges')" id="nav-challenges" class="nav-item py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">
+                    4. 주요 과제 (UI)
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- SECTION 1: Q&A and Tech Decisions -->
+        <section id="section-qna" class="space-y-8 animate-fade-in">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">지난 발표 피드백 및 기술 검증</h2>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    지난 발표에서 제기된 연결 시간 제한 이슈와 네트워크 프레임워크 선택 이유에 대한 검증 결과입니다.
+                    우리는 <strong>Multipeer Connectivity</strong>를 유지하기로 결정했습니다.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <!-- Text Content -->
+                    <div class="space-y-6">
+                        <div class="p-4 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                            <h3 class="font-semibold text-gray-900 mb-2">Q. 연결 시간 10분 제한 이슈?</h3>
+                            <p class="text-sm text-gray-600">
+                                <span class="text-green-600 font-bold">✓ 해결됨:</span> Multipeer Connectivity 자체에는 시간 제한이 없습니다.
+                                실제로 팀원이 <strong>50분 이상</strong> 데이터 전송을 테스트하여 연결이 유지됨을 확인했습니다.
+                            </p>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 rounded-xl border-l-4 border-indigo-500">
+                            <h3 class="font-semibold text-gray-900 mb-2">Q. Network.framework 비교?</h3>
+                            <p class="text-sm text-gray-600 mb-2">
+                                Network.framework는 저수준 제어로 고성능을 낼 수 있지만, 현재 우리 앱(정지 화면 촬영)에는 Multipeer가 충분한 성능을 제공합니다.
+                            </p>
+                            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1 ml-1">
+                                <li>프로토타입이 이미 완성됨 (빠른 개발 속도)</li>
+                                <li>추후 한계 발생 시 마이그레이션 고려</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Visualization -->
+                    <div class="bg-white p-4 rounded-xl shadow-inner border border-gray-100 flex flex-col items-center">
+                        <h4 class="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">기술 스택 비교 분석</h4>
+                        <div class="chart-container">
+                            <canvas id="techChart"></canvas>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 text-center">차트는 각 프레임워크의 상대적 강점을 나타냅니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Process Timeline -->
+        <section id="section-process" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">프로젝트 진행 과정</h2>
+                <p class="text-gray-600 mb-8">
+                    인터미션 기간 동안 진행된 프로토타입 병합 과정과 1차 주요 기능 개발 현황입니다.
+                    팀원 간의 이해도 동기화를 위해 짝 프로그래밍을 적극 활용했습니다.
+                </p>
+
+                <div class="relative border-l-2 border-gray-200 ml-4 space-y-12">
+                    <!-- Step 1 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
+                        <h3 class="text-lg font-bold text-gray-900">프로토타입 병합</h3>
+                        <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Completed</span>
+                        <div class="mt-2 p-4 bg-gray-50 rounded-lg">
+                            <p class="text-gray-700 text-sm">
+                                기존에 각자 개발한 코드를 재활용하되, <strong>짝 프로그래밍</strong>을 통해 코드 이해도를 맞추었습니다.
+                                <br>
+                                <span class="text-gray-500 text-xs mt-1 block">- 대현님의 코드를 베이스로 통합 진행</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 border-2 border-white shadow"></div>
+                        <h3 class="text-lg font-bold text-gray-900">핵심 기능 개발 (1차 목표)</h3>
+                        <span class="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded">In Progress</span>
+                        <div class="mt-2 p-4 bg-gray-50 rounded-lg">
+                            <p class="text-gray-700 text-sm mb-2">단일 뷰에서 다음 기능들이 완벽하게 동작하는 것을 목표로 함:</p>
+                            <div class="flex gap-2 flex-wrap">
+                                <span class="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">기기 연결</span>
+                                <span class="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">비디오 스트리밍</span>
+                                <span class="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">사진 전송</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-300 border-2 border-white shadow"></div>
+                        <h3 class="text-lg font-bold text-gray-900">고도화 예정</h3>
+                        <div class="mt-2 p-4 bg-gray-50 rounded-lg opacity-75">
+                            <p class="text-gray-500 text-sm">
+                                UI/UX 폴리싱 및 성능 최적화, 반응형 레이아웃 적용
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Architecture -->
+        <section id="section-architecture" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">아키텍처 및 디자인 패턴</h2>
+                <p class="text-gray-600 mb-6">
+                    네트워크 상태 변화 등 복잡한 상태 관리를 위해 <strong>MVI (Model-View-Intent)</strong> 패턴을 도입했습니다.
+                    아래 다이어그램의 각 요소를 클릭하여 상세 내용을 확인하세요.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Interactive Diagram Area -->
+                    <div class="lg:col-span-2 bg-slate-50 rounded-xl p-8 border border-slate-200 relative flex flex-col justify-center items-center min-h-[300px]">
+                        <!-- Flow Line -->
+                        <div class="absolute top-1/2 left-10 right-10 h-1 bg-gray-300 -z-0"></div>
+                        <div class="absolute top-1/2 right-10 w-3 h-3 border-t-2 border-r-2 border-gray-300 transform rotate-45 -mt-1.5"></div>
+
+                        <!-- Nodes -->
+                        <div class="flex justify-between w-full max-w-lg z-10">
+                            <!-- Intent -->
+                            <div onclick="selectArch('intent')" id="node-intent" class="arch-node bg-white border-2 border-gray-300 w-24 h-24 rounded-full flex items-center justify-center flex-col shadow-sm text-center p-2">
+                                <span class="font-bold text-gray-800">Intent</span>
+                                <span class="text-[10px] text-gray-500">사용자 의도</span>
+                            </div>
+
+                            <!-- Model -->
+                            <div onclick="selectArch('model')" id="node-model" class="arch-node bg-white border-2 border-gray-300 w-24 h-24 rounded-full flex items-center justify-center flex-col shadow-sm text-center p-2">
+                                <span class="font-bold text-gray-800">Model</span>
+                                <span class="text-[10px] text-gray-500">상태 (State)</span>
+                            </div>
+
+                            <!-- View -->
+                            <div onclick="selectArch('view')" id="node-view" class="arch-node bg-white border-2 border-gray-300 w-24 h-24 rounded-full flex items-center justify-center flex-col shadow-sm text-center p-2">
+                                <span class="font-bold text-gray-800">View</span>
+                                <span class="text-[10px] text-gray-500">UI 렌더링</span>
+                            </div>
+                        </div>
+
+                        <!-- Loopback Label -->
+                        <div class="absolute bottom-4 text-xs text-gray-400">단방향 데이터 흐름 (Unidirectional Data Flow)</div>
+                    </div>
+
+                    <!-- Detail Panel -->
+                    <div class="bg-blue-50 rounded-xl p-6 border border-blue-100 flex flex-col justify-center">
+                        <div id="arch-detail-content">
+                            <h3 class="text-lg font-bold text-blue-900 mb-2">MVI 패턴 도입 배경</h3>
+                            <p class="text-sm text-blue-800 leading-relaxed mb-4">
+                                네트워크 끊김 등 예측 불가능한 상황에서 <strong>단방향 구조</strong>가 주는 신뢰성이 필요했습니다.
+                            </p>
+                            <div class="h-px bg-blue-200 my-4"></div>
+                            <h4 class="font-semibold text-blue-900 text-sm mb-1">Clean Architecture 적용 여부?</h4>
+                            <p class="text-xs text-blue-700">
+                                서버나 복잡한 데이터 레이어가 없어 엄격한 계층 분리는 생략했습니다. 의존성 방향은 고려하되, 실용적인 구조를 택했습니다.
+                            </p>
+                            <div class="mt-4 p-3 bg-white rounded-lg border border-blue-200 shadow-sm">
+                                <p class="text-xs text-gray-600 font-medium">👈 다이어그램의 원을 클릭해보세요.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Challenges -->
+        <section id="section-challenges" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">주요 과제: 반응형 UI (Responsive Design)</h2>
+                <p class="text-gray-600 mb-6">
+                    다양한 기기(iPad Pro, iPad Mini, Mac 등)의 화면 크기에 대응하여 촬영 화면을 왜곡 없이 보여주는 것이 가장 큰 과제입니다.
+                    현재 시간이 많이 소요되고 있어 논의가 필요한 부분입니다.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Text Description -->
+                    <div class="space-y-4">
+                        <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                            <h3 class="text-orange-900 font-bold mb-2">문제점</h3>
+                            <ul class="list-disc list-inside text-sm text-orange-800 space-y-2">
+                                <li>기기마다 화면 비율(Aspect Ratio)이 다름</li>
+                                <li>카메라 프리뷰 레이어의 프레임 계산 복잡도</li>
+                                <li>다양한 크기에 대응하는 뷰 코드 작성 시간 소요</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <h3 class="text-gray-900 font-bold mb-2">대응 전략</h3>
+                            <p class="text-sm text-gray-600">
+                                오토 레이아웃 제약조건을 동적으로 수정하거나, SwiftUI의 GeometryReader 등을 활용하여 적응형 레이아웃을 연구 중입니다.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Simulator -->
+                    <div class="bg-gray-800 rounded-xl p-6 flex flex-col items-center justify-center text-white relative overflow-hidden">
+                        <h4 class="text-xs font-semibold text-gray-400 mb-4 uppercase">화면 비율 시뮬레이션</h4>
+
+                        <!-- Simulation Container -->
+                        <div id="sim-device" class="bg-white transition-all duration-300 ease-out flex items-center justify-center relative shadow-2xl" style="width: 200px; height: 300px; border-radius: 20px;">
+                            <div class="absolute inset-2 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                                <span class="text-gray-400 text-xs font-mono">Camera Feed</span>
+                                <!-- Simulated Camera Content -->
+                                <div class="absolute w-12 h-12 bg-blue-500 rounded-full opacity-20 animate-pulse"></div>
+                            </div>
+                            <!-- Notch/Camera -->
+                            <div class="absolute top-1 w-20 h-4 bg-black rounded-b-lg"></div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="w-full mt-8 space-y-2">
+                            <label class="text-xs text-gray-400 flex justify-between">
+                                <span>Device Width</span>
+                                <span id="width-val">Phone</span>
+                            </label>
+                            <input type="range" min="150" max="350" value="200" id="width-slider" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 px-1">
+                                <span>Phone</span>
+                                <span>Mini</span>
+                                <span>Pro / Mac</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 text-center">슬라이더를 움직여 다양한 화면 크기에서의 레이아웃 변화 필요성을 확인하세요.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2024 Apple Device Photo Booth Team. All rights reserved.</p>
+            <p>Presentation Dashboard</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            currentTab: 'qna',
+            chartInstance: null
+        };
+
+        const contentData = {
+            intent: {
+                title: "Intent (사용자 의도)",
+                desc: "사용자의 행동(버튼 클릭, 제스처 등)을 포착하여 '의도' 객체로 변환합니다. 뷰모델의 의도를 명확히 파악할 수 있어 협업에 유리합니다."
+            },
+            model: {
+                title: "Model (상태)",
+                desc: "앱의 단일 진실 공급원(Single Source of Truth)입니다. 불변(Immutable) 상태를 유지하여 스레드 안전성과 예측 가능성을 보장합니다."
+            },
+            view: {
+                title: "View (UI 렌더링)",
+                desc: "모델의 상태를 구독하여 화면을 그립니다. 상태에 따라 UI가 결정되므로 네트워크 오류 등으로 인한 상태 변화 시 즉각적이고 정확한 UI 반영이 가능합니다."
+            }
+        };
+
+        // --- Core Interactions ---
+
+        function switchTab(tabId) {
+            // Update State
+            state.currentTab = tabId;
+
+            // UI Updates: Hide all sections, show target
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
+            // Nav Styling
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active', 'text-gray-900');
+                btn.classList.add('text-gray-500');
+            });
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.add('active', 'text-gray-900');
+            activeBtn.classList.remove('text-gray-500');
+
+            // Trigger Chart Render if QnA tab is selected and chart doesn't exist
+            if (tabId === 'qna' && !state.chartInstance) {
+                renderChart();
+            }
+        }
+
+        // Architecture Interaction
+        function selectArch(nodeId) {
+            // Reset styles
+            document.querySelectorAll('.arch-node').forEach(node => node.classList.remove('selected'));
+
+            // Highlight selected
+            document.getElementById(`node-${nodeId}`).classList.add('selected');
+
+            // Update Content
+            const data = contentData[nodeId];
+            const contentDiv = document.getElementById('arch-detail-content');
+
+            // Simple fade effect
+            contentDiv.style.opacity = '0';
+            setTimeout(() => {
+                contentDiv.innerHTML = `
+                    <h3 class="text-lg font-bold text-blue-900 mb-2">${data.title}</h3>
+                    <p class="text-sm text-blue-800 leading-relaxed mb-4">${data.desc}</p>
+                    <div class="mt-4 p-3 bg-white rounded-lg border border-blue-200 shadow-sm flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <p class="text-xs text-gray-600 font-medium">협업 시 의도 파악이 용이함</p>
+                    </div>
+                `;
+                contentDiv.style.opacity = '1';
+            }, 200);
+        }
+
+        // Simulator Interaction
+        const slider = document.getElementById('width-slider');
+        const device = document.getElementById('sim-device');
+        const label = document.getElementById('width-val');
+
+        slider.addEventListener('input', (e) => {
+            const width = e.target.value;
+            device.style.width = `${width}px`;
+
+            if (width < 180) {
+                label.innerText = "Phone (Portrait)";
+                device.style.borderRadius = "20px";
+            } else if (width < 280) {
+                label.innerText = "Tablet (Mini)";
+                device.style.borderRadius = "10px";
+            } else {
+                label.innerText = "Desktop / Pro";
+                device.style.borderRadius = "4px";
+            }
+        });
+
+        // --- Chart.js Implementation ---
+        function renderChart() {
+            const ctx = document.getElementById('techChart').getContext('2d');
+
+            state.chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['개발 용이성', '정적 촬영 적합성', '영상 성능(Latency)', '안정성(연결)', '구현 속도'],
+                    datasets: [{
+                        label: 'Multipeer Connectivity (현재 선택)',
+                        data: [90, 95, 70, 85, 90],
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)', // Blue-500
+                        borderColor: 'rgb(59, 130, 246)',
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(59, 130, 246)'
+                    }, {
+                        label: 'Network.framework (대안)',
+                        data: [40, 90, 95, 80, 40],
+                        fill: true,
+                        backgroundColor: 'rgba(156, 163, 175, 0.2)', // Gray-400
+                        borderColor: 'rgb(156, 163, 175)',
+                        pointBackgroundColor: 'rgb(156, 163, 175)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(156, 163, 175)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: false
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    family: "'Noto Sans KR', sans-serif",
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: "'Noto Sans KR', sans-serif"
+                                },
+                                boxWidth: 10,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 10,
+                            titleFont: { family: "'Noto Sans KR', sans-serif" },
+                            bodyFont: { family: "'Noto Sans KR', sans-serif" }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChart();
+        });
+
+    </script>
+</body>
+</html>
